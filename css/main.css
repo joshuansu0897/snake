@@ -1,0 +1,66 @@
+html,
+body {
+    height: 100%;
+    margin: 0;
+    font-family: monospace;
+}
+
+body {
+    background: black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+canvas {
+    border: 1px solid white;
+}
+
+/* title */
+.main-title {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid white;
+    margin-bottom: 10px;
+}
+
+.main-title-principal {
+    text-align: left;
+    margin: 0px 0px 0px 5px;
+}
+
+.main-title-text {
+    color: rgb(147, 147, 147);
+    text-align: left;
+    margin: 0px 0px 10px 5px;
+}
+
+/* game */
+.main-game {
+    display: flex;
+    flex-direction: row;
+}
+
+/* game score */
+.main-game-score {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid white;
+    margin-left: 10px;
+    text-align: center;
+    padding: 5px;
+}
+
+.main-game-score-history {
+    border: 1px solid white;
+    border-radius: 10px;
+    padding: 10px;
+    margin: 10px;
+}
+
+ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
