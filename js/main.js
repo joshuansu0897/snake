@@ -6,6 +6,7 @@ let score = 0
 let highScore = 0
 let game = 1
 let historyScore = []
+let human_is_playing = true
 const grid = 16
 
 const snake = {
@@ -167,6 +168,34 @@ document.addEventListener('keydown', function (e) {
     snake.dy = grid
     snake.dx = 0
   }
+})
+
+// listen toggle input to change the player mode
+document.getElementById('toggle').addEventListener('click', function () {
+  human_is_playing = !human_is_playing
+
+  console.log(human_is_playing)
+
+  // reset the game
+  snake.x = 160
+  snake.y = 160
+  snake.cells = []
+  snake.maxCells = 4
+  snake.dx = grid
+  snake.dy = 0
+  score = 0
+
+  // reset the score
+  document.getElementById('score').innerHTML = `Score: ${score}`
+  document.getElementById('history-score').innerHTML = ''
+  game = 1
+  historyScore = []
+  document.getElementById('high-score').innerHTML = `High Score: ${highScore}`
+
+  // reset the apple position
+  apple.x = getRandomInt(0, 25) * grid
+  apple.y = getRandomInt(0, 25) * grid
+
 })
 
 // start the game

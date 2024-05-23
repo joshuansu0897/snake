@@ -20,9 +20,16 @@ canvas {
 /* title */
 .main-title {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: space-between;
     border: 1px solid white;
     margin-bottom: 10px;
+}
+
+.main-title-toggle {
+    display: flex;
+    flex-direction: row;
+    margin: 10px 20px 0px 0px;
 }
 
 .main-title-principal {

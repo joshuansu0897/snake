@@ -5,14 +5,23 @@
     <title>Snake</title>
     <meta charset="UTF-8">
     <link rel="stylesheet" type="text/css" href="./css/main.css">
+    <link rel="stylesheet" type="text/css" href="./css/toggle.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 
 <body>
     <div class="main">
         <div class="main-title">
-            <h1 class="main-title-principal">Snake Game</h1>
-            <p class="main-title-text">Use the arrow keys to control the snake</p>
+            <div>
+                <h1 class="main-title-principal">Snake Game</h1>
+                <p class="main-title-text">Use the arrow keys to control the snake</p>
+            </div>
+            <div class="main-title-toggle">
+                <div class="checkbox-wrapper-8">
+                    <input type="checkbox" id="toggle" class="tgl tgl-skewed">
+                    <label for="toggle" data-tg-on="IA" data-tg-off="HUMAN" class="tgl-btn"></label>
+                </div>
+            </div>
         </div>
         <div class="main-game">
             <div class="main-game-canvas">
