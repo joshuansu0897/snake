@@ -61,16 +61,14 @@ function loop() {
   // wrap snake position horizontally on edge of screen
   if (snake.x < 0) {
     snake.x = canvas.width - grid
-  }
-  else if (snake.x >= canvas.width) {
+  } else if (snake.x >= canvas.width) {
     snake.x = 0
   }
 
   // wrap snake position vertically on edge of screen
   if (snake.y < 0) {
     snake.y = canvas.height - grid
-  }
-  else if (snake.y >= canvas.height) {
+  } else if (snake.y >= canvas.height) {
     snake.y = 0
   }
 
@@ -200,3 +198,4 @@ document.getElementById('toggle').addEventListener('click', function () {
 
 // start the game
 requestAnimationFrame(loop)
+
