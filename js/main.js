@@ -164,10 +164,11 @@ function loop() {
       }
     }
 
+    // count frames
     training_count++
 
-    // train the network every  data points
-    if (training_count === 30 || first_time) {
+    // train the network every 40 frames
+    if (training_count === 40 || first_time) {
       first_time = false
       network.train(trainingData)
       training_count = 0
