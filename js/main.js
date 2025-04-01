@@ -135,8 +135,8 @@ function loop() {
       } else {
 
         // random number between 0 and 1
-        // if the random number is less than 0.20, add the input to the training data
-        if (Math.random() < 0.20) {
+        // if the random number is less than 0.10, add the input to the training data
+        if (Math.random() < 0.10) {
           trainingData.push({
             input: {
               apple_x: apple.x / canvas.width,
