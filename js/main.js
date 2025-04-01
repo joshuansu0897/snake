@@ -153,10 +153,10 @@ function loop() {
               tail_down: (snake.cells[0].y + grid) / canvas.height
             },
             output: {
-              up: 0,
-              down: 0,
-              left: 0,
-              right: 0
+              up: Math.random(),
+              down: Math.random(),
+              left: Math.random(),
+              right: Math.random()
             }
           })
         }
@@ -167,8 +167,8 @@ function loop() {
     // count frames
     training_count++
 
-    // train the network every 40 frames
-    if (training_count === 40 || first_time) {
+    // train the network every 50 frames
+    if (training_count === 50 || first_time) {
       first_time = false
       network.train(trainingData)
       training_count = 0
