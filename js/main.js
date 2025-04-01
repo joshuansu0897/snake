@@ -135,8 +135,8 @@ function loop() {
       } else {
 
         // random number between 0 and 1
-        // if the random number is less than 0.4, add the input to the training data
-        if (Math.random() < 0.4) {
+        // if the random number is less than 0.35, add the input to the training data
+        if (Math.random() < 0.35) {
           trainingData.push({
             input: {
               apple_x: apple.x / canvas.width,
@@ -167,10 +167,11 @@ function loop() {
     // count frames
     training_count++
 
-    // train the network every 50 frames
-    if (training_count === 50 || first_time) {
+    // train the network every 25 frames
+    if (training_count === 25 || first_time) {
       first_time = false
       network.train(trainingData)
+      console.log(`trainingData: ${trainingData.length}`)
       training_count = 0
     }
 
