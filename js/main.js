@@ -1,14 +1,26 @@
 const canvas = document.getElementById('game')
 const context = canvas.getContext('2d')
 
+// create neuronal network
+const network = new brain.NeuralNetwork({
+  hiddenLayers: [2]
+})
+
+// create training data array
+const trainingData = []
+
+// create global variables
 let count = 0
 let score = 0
 let highScore = 0
+let training_count = 0
 let game = 1
 let historyScore = []
 let human_is_playing = true
+let first_time = true
 const grid = 16
 
+// create snake
 const snake = {
   // snake start position
   x: 160,
@@ -28,6 +40,7 @@ const snake = {
   color: 'green'
 }
 
+// create apple
 const apple = {
   x: 320,
   y: 320,
@@ -83,6 +96,117 @@ function loop() {
   // draw apple
   context.fillStyle = apple.color
   context.fillRect(apple.x, apple.y, grid - 1, grid - 1)
+
+  if (!human_is_playing) {
+
+    let perfect_input = {
+      input: {
+        apple_x: apple.x / canvas.width,
+        apple_y: apple.y / canvas.height,
+        snake_x: snake.x / canvas.width,
+        snake_y: snake.y / canvas.height,
+        left: snake.dx === -grid ? 1 : 0,
+        right: snake.dx === grid ? 1 : 0,
+        up: snake.dy === -grid ? 1 : 0,
+        down: snake.dy === grid ? 1 : 0,
+        tail_left: (snake.cells[0].x - grid) / canvas.width,
+        tail_right: (snake.cells[0].x + grid) / canvas.width,
+        tail_up: (snake.cells[0].y - grid) / canvas.height,
+        tail_down: (snake.cells[0].y + grid) / canvas.height
+      },
+      output: {
+        up: snake.x === apple.x && snake.y > apple.y ? 1 : 0,
+        down: snake.x === apple.x && snake.y < apple.y ? 1 : 0,
+        left: snake.y === apple.y && snake.x > apple.x ? 1 : 0,
+        right: snake.y === apple.y && snake.x < apple.x ? 1 : 0
+      }
+    }
+
+    if (first_time) {
+      trainingData.push(perfect_input)
+    } else {
+      if (
+        snake.x === apple.x && snake.y > apple.y ||
+        snake.x === apple.x && snake.y < apple.y ||
+        snake.y === apple.y && snake.x > apple.x ||
+        snake.y === apple.y && snake.x < apple.x
+      ) {
+        trainingData.push(perfect_input)
+      } else {
+
+        // random number between 0 and 1
+        // if the random number is less than 0.4, add the input to the training data
+        if (Math.random() < 0.4) {
+          trainingData.push({
+            input: {
+              apple_x: apple.x / canvas.width,
+              apple_y: apple.y / canvas.height,
+              snake_x: snake.x / canvas.width,
+              snake_y: snake.y / canvas.height,
+              left: snake.dx === -grid ? 1 : 0,
+              right: snake.dx === grid ? 1 : 0,
+              up: snake.dy === -grid ? 1 : 0,
+              down: snake.dy === grid ? 1 : 0,
+              tail_left: (snake.cells[0].x - grid) / canvas.width,
+              tail_right: (snake.cells[0].x + grid) / canvas.width,
+              tail_up: (snake.cells[0].y - grid) / canvas.height,
+              tail_down: (snake.cells[0].y + grid) / canvas.height
+            },
+            output: {
+              up: 0,
+              down: 0,
+              left: 0,
+              right: 0
+            }
+          })
+        }
+
+      }
+    }
+
+    training_count++
+
+    // train the network every  data points
+    if (training_count === 30 || first_time) {
+      first_time = false
+      network.train(trainingData)
+      training_count = 0
+    }
+
+    // get the output from the network
+    const output = network.run({
+      apple_x: apple.x / canvas.width,
+      apple_y: apple.y / canvas.height,
+      snake_x: snake.x / canvas.width,
+      snake_y: snake.y / canvas.height,
+      left: snake.dx === -grid ? 1 : 0,
+      right: snake.dx === grid ? 1 : 0,
+      up: snake.dy === -grid ? 1 : 0,
+      down: snake.dy === grid ? 1 : 0,
+      tail_left: (snake.cells[0].x - grid) / canvas.width,
+      tail_right: (snake.cells[0].x + grid) / canvas.width,
+      tail_up: (snake.cells[0].y - grid) / canvas.height,
+      tail_down: (snake.cells[0].y + grid) / canvas.height
+    })
+
+    // get the direction with the highest output value
+    const direction = Object.keys(output).reduce((a, b) => output[a] > output[b] ? a : b)
+
+    // set the direction based on the output
+    if (direction === 'left' && snake.dx === 0) {
+      snake.dx = -grid
+      snake.dy = 0
+    } else if (direction === 'right' && snake.dx === 0) {
+      snake.dx = grid
+      snake.dy = 0
+    } else if (direction === 'up' && snake.dy === 0) {
+      snake.dy = -grid
+      snake.dx = 0
+    } else if (direction === 'down' && snake.dy === 0) {
+      snake.dy = grid
+      snake.dx = 0
+    }
+  }
 
   // draw snake one cell at a time
   context.fillStyle = snake.color
@@ -147,6 +271,10 @@ document.addEventListener('keydown', function (e) {
   // left won't do anything, and pressing right while moving left
   // shouldn't let you collide with your own body)
 
+  if (!human_is_playing) {
+    return
+  }
+
   if (e.code === 'ArrowLeft' && snake.dx === 0) {
     snake.dx = -grid
     snake.dy = 0
@@ -172,8 +300,6 @@ document.addEventListener('keydown', function (e) {
 document.getElementById('toggle').addEventListener('click', function () {
   human_is_playing = !human_is_playing
 
-  console.log(human_is_playing)
-
   // reset the game
   snake.x = 160
   snake.y = 160
@@ -198,4 +324,3 @@ document.getElementById('toggle').addEventListener('click', function () {
 
 // start the game
 requestAnimationFrame(loop)
-
