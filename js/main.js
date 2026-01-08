@@ -3,11 +3,9 @@ const context = canvas.getContext('2d')
 
 // Q-Learning variables
 const qTable = {}
-const alpha = 0.2 // Learning rate
+const alpha = 0.1 // Learning rate
 const gamma = 0.9 // Discount factor
-let epsilon = 1.0 // Exploration rate
-const epsilonDecay = 0.99 // Decay factor
-const epsilonMin = 0.01 // Minimum exploration
+const epsilon = 0.1 // Exploration rate
 let lastState = null
 let lastAction = null
 const actions = ['left', 'up', 'right', 'down']
@@ -213,11 +211,6 @@ function loop(timestamp) {
         document.getElementById('history-score').prepend(li)
         game++
 
-        // Decay epsilon
-        if (epsilon > epsilonMin) {
-          epsilon *= epsilonDecay
-        }
-
         // if history-score has more than 20 entries, remove the last one
         if (document.getElementById('history-score').children.length > 20) {
           document.getElementById('history-score').removeChild(document.getElementById('history-score').lastChild)
@@ -335,7 +328,6 @@ document.getElementById('ia_toggle').addEventListener('click', function () {
   human_is_playing = !human_is_playing
   lastState = null
   lastAction = null
-  epsilon = 1.0
 
   // reset the game
   snake.x = 160
