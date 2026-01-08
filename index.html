@@ -7,32 +7,59 @@
     <link rel="stylesheet" type="text/css" href="./css/main.css">
     <link rel="stylesheet" type="text/css" href="./css/toggle.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
     <div class="main">
-        <div class="main-title">
+        <div class="main-container">
             <div>
-                <h1 class="main-title-principal">Snake Game</h1>
-                <p class="main-title-text">Use the arrow keys to control the snake</p>
-            </div>
-            <div class="main-title-toggle">
-                <div class="checkbox-wrapper-8">
-                    <input type="checkbox" id="toggle" class="tgl tgl-skewed">
-                    <label for="toggle" data-tg-on="IA" data-tg-off="HUMAN" class="tgl-btn"></label>
+                <div class="main-title">
+                    <div>
+                        <h1 class="main-title-principal">Snake Game</h1>
+                        <p class="main-title-text">Use the arrow keys to control the snake</p>
+                    </div>
+                    <div class="main-title-toggle">
+                        <div style="margin-right: 15px; text-align: right;">
+                            <div style="color: rgb(147, 147, 147); font-size: 12px; margin-bottom: 2px;">Speed: <span id="speedValue">15</span> FPS</div>
+                            <input type="range" min="1" max="60" value="15" id="speedRange" style="cursor: pointer; width: 100px;">
+                        </div>
+                        <div class="checkbox-wrapper-8">
+                            <input type="checkbox" id="ia_toggle" class="tgl tgl-skewed">
+                            <label for="ia_toggle" data-tg-on="IA" data-tg-off="HUMAN" class="tgl-btn"></label>
+                        </div>
+                        <div class="checkbox-wrapper-8" style="margin-left: 5px;">
+                            <input type="checkbox" id="eyes_toggle" class="tgl tgl-skewed">
+                            <label for="eyes_toggle" data-tg-on="Eyes" data-tg-off="NoEyes" class="tgl-btn"></label>
+                        </div>
+                    </div>
+                </div>
+                <div class="main-game">
+                    <div class="main-game-canvas">
+                        <canvas width="400" height="400" id="game"></canvas>
+                    </div>
+                    <div class="main-game-score">
+                        <div id="score">Score: 0</div>
+                        <div id="high-score">High Score: 0</div>
+                        <div class="main-game-score-history">
+                            <div id="high-score">History Score</div>
+                            <ul id="history-score"></ul>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="main-game">
-            <div class="main-game-canvas">
-                <canvas width="400" height="400" id="game"></canvas>
-            </div>
-            <div class="main-game-score">
-                <div id="score">Score: 0</div>
-                <div id="high-score">High Score: 0</div>
-                <div class="main-game-score-history">
-                    <div id="high-score">History Score</div>
-                    <ul id="history-score"></ul>
+            <div class="main-qtable">
+                <div style="display: flex; align-items: center;">
+                    <h1 class="main-title-principal">Q-Table</h1>
+                    <button id="refresh-qtable"
+                        style="cursor: pointer; padding: 5px; margin-left: 10px; background-color: #86d993; color: white;">Refresh</button>
+                    <button id="save-qtable"
+                        style="cursor: pointer; padding: 5px; margin-left: 10px; background-color: #86d993; color: white;">Save</button>
+                    <button id="load-qtable"
+                        style="cursor: pointer; padding: 5px; margin-left: 10px; background-color: #86d993; color: white;">Load</button>
+                </div>
+                <div id="q-table-container"
+                    style="max-height: 437px; overflow-y: auto;">
                 </div>
             </div>
         </div>
