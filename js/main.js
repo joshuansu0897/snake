@@ -17,6 +17,7 @@ let game = 1
 let historyScore = []
 let human_is_playing = true
 let perception_on = false
+let changingDirection = false
 const grid = 16
 let fps = 15
 let fpsInterval = 1000 / fps
@@ -118,6 +119,8 @@ function loop(timestamp) {
   const elapsed = timestamp - then
   if (elapsed < fpsInterval) return
   then = timestamp - (elapsed % fpsInterval)
+
+  changingDirection = false
 
   context.clearRect(0, 0, canvas.width, canvas.height)
 
@@ -302,24 +305,30 @@ document.addEventListener('keydown', function (e) {
     return
   }
 
+  if (changingDirection) return
+
   if (e.code === 'ArrowLeft' && snake.dx === 0) {
     snake.dx = -grid
     snake.dy = 0
+    changingDirection = true
   }
 
   else if (e.code === 'ArrowRight' && snake.dx === 0) {
     snake.dx = grid
     snake.dy = 0
+    changingDirection = true
   }
 
   else if (e.code === 'ArrowUp' && snake.dy === 0) {
     snake.dy = -grid
     snake.dx = 0
+    changingDirection = true
   }
 
   else if (e.code === 'ArrowDown' && snake.dy === 0) {
     snake.dy = grid
     snake.dx = 0
+    changingDirection = true
   }
 })
 
