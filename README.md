@@ -4,3 +4,6 @@
 - [x] Save Model to a local JSON file
 - [x] Load Model from local JSON file
 - [x] Write Agent improvements/model to JSON file
+
+# Next Steps
+- [ ] Store model in a database or bucket
