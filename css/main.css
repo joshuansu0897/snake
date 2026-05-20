@@ -314,7 +314,7 @@ canvas#game {
     border: 1px solid rgba(255, 255, 255, 0.04);
     background: rgba(0, 0, 0, 0.1);
     border-radius: 8px;
-    padding: 4px;
+    padding: 8px;
 }
 
 .history-list-wrapper::-webkit-scrollbar {
@@ -327,20 +327,29 @@ canvas#game {
 }
 
 .history-list {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 6px;
     list-style: none;
+    padding: 0;
+    margin: 0;
 }
 
 .history-item {
     display: flex;
     justify-content: space-between;
-    padding: 6px 12px;
-    font-size: 12px;
+    align-items: center;
+    padding: 6px 10px;
+    font-size: 11px;
     border-radius: 6px;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.02);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    transition: all 0.2s ease;
+}
+
+.history-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(0, 229, 255, 0.2);
 }
 
 .history-item .run-index {
