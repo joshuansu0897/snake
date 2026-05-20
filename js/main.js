@@ -449,9 +449,9 @@
       game++;
       document.getElementById('game-counter').textContent = game;
 
-      // Limit run log list to 20 entries
+      // Limit run log list to 50 entries
       const historyList = document.getElementById('history-score');
-      if (historyList.children.length > 20) {
+      if (historyList.children.length > 50) {
         historyList.removeChild(historyList.lastChild);
       }
 
