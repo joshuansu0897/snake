@@ -2,69 +2,167 @@
 <html lang="en">
 
 <head>
-    <title>Snake</title>
+    <title>Snake AI Dashboard</title>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A real-time Snake Game trained using Reinforcement Learning (Q-Learning) featuring automated visual analytics.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheets -->
     <link rel="stylesheet" type="text/css" href="./css/main.css">
     <link rel="stylesheet" type="text/css" href="./css/toggle.css">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Chart.js for score analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
-    <div class="main">
-        <div class="main-container">
-            <div>
-                <div class="main-title">
-                    <div>
-                        <h1 class="main-title-principal">Snake Game</h1>
-                        <p class="main-title-text">Use the arrow keys to control the snake</p>
-                    </div>
-                    <div class="main-title-toggle">
-                        <div style="margin-right: 15px; text-align: right;">
-                            <div style="color: rgb(147, 147, 147); font-size: 12px; margin-bottom: 2px;">Speed: <span id="speedValue">15</span> FPS</div>
-                            <input type="range" min="1" max="60" value="15" id="speedRange" style="cursor: pointer; width: 100px;">
-                        </div>
-                        <div class="checkbox-wrapper-8">
-                            <input type="checkbox" id="ia_toggle" class="tgl tgl-skewed">
-                            <label for="ia_toggle" data-tg-on="IA" data-tg-off="HUMAN" class="tgl-btn"></label>
-                        </div>
-                        <div class="checkbox-wrapper-8" style="margin-left: 5px;">
-                            <input type="checkbox" id="eyes_toggle" class="tgl tgl-skewed">
-                            <label for="eyes_toggle" data-tg-on="Eyes" data-tg-off="NoEyes" class="tgl-btn"></label>
-                        </div>
+    <div class="dashboard-wrapper">
+        <header class="dashboard-header">
+            <div class="brand">
+                <h1 class="brand-title">SNAKE<span class="highlight">AI</span></h1>
+                <p class="brand-subtitle">Real-time Reinforcement Q-Learning Sandbox</p>
+            </div>
+            <div class="header-controls">
+                <div class="control-item">
+                    <span class="control-label">Speed: <span id="speedValue">15</span> FPS</span>
+                    <div class="slider-wrapper">
+                        <input type="range" min="1" max="60" value="15" id="speedRange" class="modern-slider">
                     </div>
                 </div>
-                <div class="main-game">
-                    <div class="main-game-canvas">
-                        <canvas width="400" height="400" id="game"></canvas>
+                <div class="control-item toggle-item">
+                    <div class="checkbox-wrapper-8">
+                        <input type="checkbox" id="ia_toggle" class="tgl tgl-skewed">
+                        <label for="ia_toggle" data-tg-on="AI MODE" data-tg-off="HUMAN" class="tgl-btn"></label>
                     </div>
-                    <div class="main-game-score">
-                        <div id="score">Score: 0</div>
-                        <div id="high-score">High Score: 0</div>
-                        <div class="main-game-score-history">
-                            <div id="high-score">History Score</div>
-                            <ul id="history-score"></ul>
-                        </div>
+                </div>
+                <div class="control-item toggle-item">
+                    <div class="checkbox-wrapper-8">
+                        <input type="checkbox" id="eyes_toggle" class="tgl tgl-skewed">
+                        <label for="eyes_toggle" data-tg-on="EYES ON" data-tg-off="EYES OFF" class="tgl-btn"></label>
                     </div>
                 </div>
             </div>
-            <div class="main-qtable">
-                <div style="display: flex; align-items: center;">
-                    <h1 class="main-title-principal">Q-Table</h1>
-                    <button id="refresh-qtable"
-                        style="cursor: pointer; padding: 5px; margin-left: 10px; background-color: #86d993; color: white;">Refresh</button>
-                    <button id="save-qtable"
-                        style="cursor: pointer; padding: 5px; margin-left: 10px; background-color: #86d993; color: white;">Save</button>
-                    <button id="load-qtable"
-                        style="cursor: pointer; padding: 5px; margin-left: 10px; background-color: #86d993; color: white;">Load</button>
+        </header>
+
+        <main class="dashboard-grid">
+            <!-- Column 1: Live Arena & Stats -->
+            <section class="dashboard-card game-card">
+                <div class="card-header">
+                    <h2 class="card-title">Live Arena</h2>
+                    <span class="status-indicator" id="game-status">Human Mode</span>
                 </div>
-                <div id="q-table-container"
-                    style="max-height: 437px; overflow-y: auto;">
+                <div class="game-viewport">
+                    <canvas width="400" height="400" id="game"></canvas>
                 </div>
+                <div class="score-row">
+                    <div class="score-stat score-box">
+                        <span class="stat-label">Current Score</span>
+                        <span class="stat-value" id="score">0</span>
+                    </div>
+                    <div class="score-stat high-box">
+                        <span class="stat-label">All-Time High</span>
+                        <span class="stat-value" id="high-score">0</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Column 2: Training Analytics -->
+            <section class="dashboard-card analytics-card">
+                <div class="card-header">
+                    <h2 class="card-title">Training Analytics</h2>
+                    <span class="stat-badge">Game <span id="game-counter">1</span></span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="scoreChart"></canvas>
+                </div>
+                <div class="score-history-container">
+                    <h3 class="history-section-title" id="history-title">Recent Run Log</h3>
+                    <div class="history-list-wrapper">
+                        <ul id="history-score" class="history-list"></ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Column 3: Sync & Q-Table Matrix -->
+            <div class="column-container">
+                <!-- Collaborative Sync Card -->
+                <section class="dashboard-card sync-card">
+                    <div class="card-header">
+                        <h2 class="card-title">Federated Sync Hub</h2>
+                        <span class="status-indicator" id="sync-status">Sandbox Mock</span>
+                    </div>
+                    
+                    <div class="sync-form">
+                        <div class="form-row">
+                            <div class="form-group flex-1">
+                                <label for="sync-provider" class="control-label">Sync Provider</label>
+                                <select id="sync-provider" class="modern-select">
+                                    <option value="mock">Mock Sandbox Server</option>
+                                    <option value="firebase">Firebase Realtime DB</option>
+                                    <option value="rest">Custom REST API</option>
+                                </select>
+                            </div>
+                            <div class="form-group flex-toggle">
+                                <label for="sync_auto_toggle" class="control-label">Auto-Sync</label>
+                                <div class="checkbox-wrapper-8">
+                                    <input type="checkbox" id="sync_auto_toggle" class="tgl tgl-skewed">
+                                    <label for="sync_auto_toggle" data-tg-on="AUTO ON" data-tg-off="MANUAL" class="tgl-btn"></label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group" id="url-group" style="display: none;">
+                            <label for="sync-url" class="control-label">Database Endpoint URL</label>
+                            <input type="text" id="sync-url" placeholder="https://<proj>.firebaseio.com/qtable.json" class="modern-input">
+                        </div>
+
+                        <div class="form-group">
+                            <div class="label-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <label for="syncBlendRange" class="control-label">Model Blend Rate (&eta;)</label>
+                                <span class="range-value" style="color: #00ff88; font-weight: 700; font-family: monospace; font-size: 12px;"><span id="blendValue">30</span>%</span>
+                            </div>
+                            <input type="range" min="5" max="100" value="30" id="syncBlendRange" class="modern-slider full-width" style="width: 100%;">
+                        </div>
+                    </div>
+
+                    <div class="sync-telemetry" style="display: flex; gap: 16px; background: rgba(0, 0, 0, 0.15); padding: 10px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.03);">
+                        <div class="telemetry-item" style="flex: 1; text-align: center;">
+                            <span class="stat-label" style="font-size: 9px; margin-bottom: 2px;">Cloud States</span>
+                            <div class="telemetry-val" id="sync-states" style="font-family: monospace; font-size: 14px; font-weight: 700; color: #00e5ff;">0</div>
+                        </div>
+                        <div class="telemetry-item" style="flex: 1; text-align: center;">
+                            <span class="stat-label" style="font-size: 9px; margin-bottom: 2px;">Last Sync</span>
+                            <div class="telemetry-val" id="sync-time" style="font-size: 11px; font-weight: 600; color: #a4a0ba; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Never</div>
+                        </div>
+                    </div>
+
+                    <button id="sync-now" class="btn btn-primary-glow" style="width: 100%; padding: 10px; font-weight: 700;">Sync Model Now</button>
+                </section>
+
+                <!-- Q-Table Matrix Card -->
+                <section class="dashboard-card qtable-card">
+                    <div class="card-header">
+                        <h2 class="card-title">Q-Table Matrix</h2>
+                        <div class="qtable-actions">
+                            <button id="save-qtable" class="btn btn-save" title="Save Model to Local Storage">Save Local</button>
+                            <button id="load-qtable" class="btn btn-load" title="Load Model from Local Storage">Load Local</button>
+                            <button id="refresh-qtable" class="btn btn-refresh" title="Force Refresh Q-Table">Refresh</button>
+                        </div>
+                    </div>
+                    <div class="qtable-scroll-container" style="max-height: 250px;">
+                        <div id="q-table-container"></div>
+                    </div>
+                </section>
             </div>
-        </div>
+        </main>
     </div>
-    <script src="./js/brain.js"></script>
+
+    <!-- Main JavaScript Logic -->
     <script src="./js/main.js"></script>
 </body>
 

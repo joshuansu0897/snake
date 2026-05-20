@@ -1,0 +1,13 @@
+{
+  "name": "snake-ai-federated-server",
+  "version": "1.0.0",
+  "description": "Simple REST API server to store and share Q-table model weights for Snake AI",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  }
+}

@@ -1,0 +1,16 @@
+# Local Terraform artifacts
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+**/_terraform*
+
+# Node dependencies
+node_modules/
+
+# Local weight files
+qtable.json
+
+# OS files
+.DS_Store
+Thumbs.db
