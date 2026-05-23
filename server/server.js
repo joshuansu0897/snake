@@ -15,8 +15,13 @@ app.use(express.json({ limit: '50mb' }));
 // Helper to read database file
 function readQTable() {
   try {
-    if (fs.existsSync(DB_FILE)) {
-      const data = fs.readFileSync(DB_FILE, 'utf8');
+    const basePath = path.resolve(__dirname);
+    const resolvedPath = path.normalize(DB_FILE);
+    if (!resolvedPath.startsWith(basePath)) {
+      throw new Error('Unauthorized path access attempt');
+    }
+    if (fs.existsSync(resolvedPath)) {
+      const data = fs.readFileSync(resolvedPath, 'utf8');
       return JSON.parse(data || '{}');
     }
   } catch (err) {
@@ -28,7 +33,12 @@ function readQTable() {
 // Helper to write database file
 function writeQTable(data) {
   try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+    const basePath = path.resolve(__dirname);
+    const resolvedPath = path.normalize(DB_FILE);
+    if (!resolvedPath.startsWith(basePath)) {
+      throw new Error('Unauthorized path access attempt');
+    }
+    fs.writeFileSync(resolvedPath, JSON.stringify(data, null, 2), 'utf8');
     return true;
   } catch (err) {
     console.error('Error writing Q-table file:', err);

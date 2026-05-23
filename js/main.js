@@ -5,7 +5,7 @@
   const context = canvas.getContext('2d');
 
   // Q-Learning variables
-  const qTable = {};
+  const qTable = new Map();
   const alpha = 0.1; // Learning rate
   const gamma = 0.9; // Discount factor
   const epsilon = 0.1; // Exploration rate
@@ -111,19 +111,71 @@
     return `${appleX}_${appleY}_${obsLeft}${obsRight}${obsUp}${obsDown}`;
   }
 
+  function isValidState(state) {
+    return typeof state === 'string' && /^(left|right|same)_(up|down|same)_[01]{4}$/.test(state);
+  }
+
+  function isValidAction(action) {
+    return actions.includes(action);
+  }
+
+  function mapToObj(map) {
+    const obj = {};
+    if (map && map instanceof Map) {
+      for (let [state, actionsMap] of map.entries()) {
+        obj[state] = {};
+        if (actionsMap && actionsMap instanceof Map) {
+          for (let [action, val] of actionsMap.entries()) {
+            obj[state][action] = val;
+          }
+        }
+      }
+    }
+    return obj;
+  }
+
+  function loadQTableFromObj(obj) {
+    qTable.clear();
+    if (obj && typeof obj === 'object') {
+      for (const state in obj) {
+        if (isValidState(state) && Object.prototype.hasOwnProperty.call(obj, state)) {
+          const actionsMap = new Map();
+          const actionsObj = obj[state];
+          if (actionsObj && typeof actionsObj === 'object') {
+            for (const action in actionsObj) {
+              if (isValidAction(action) && Object.prototype.hasOwnProperty.call(actionsObj, action)) {
+                actionsMap.set(action, actionsObj[action] || 0);
+              }
+            }
+          }
+          qTable.set(state, actionsMap);
+        }
+      }
+    }
+  }
+
   function getQ(state, action) {
-    if (!qTable[state]) return 0;
-    return qTable[state][action] || 0;
+    if (!isValidState(state) || !isValidAction(action)) return 0;
+    const actionsMap = qTable.get(state);
+    if (!actionsMap) return 0;
+    return actionsMap.get(action) || 0;
   }
 
   function setQ(state, action, value) {
-    if (!qTable[state]) qTable[state] = {};
-    qTable[state][action] = value;
+    if (!isValidState(state) || !isValidAction(action)) return;
+    let actionsMap = qTable.get(state);
+    if (!actionsMap) {
+      actionsMap = new Map();
+      qTable.set(state, actionsMap);
+    }
+    actionsMap.set(action, value);
   }
 
   function getMaxQ(state) {
-    if (!qTable[state]) return 0;
-    const values = actions.map(a => qTable[state][a] || 0);
+    if (!isValidState(state)) return 0;
+    const actionsMap = qTable.get(state);
+    if (!actionsMap) return 0;
+    const values = actions.map(a => actionsMap.get(a) || 0);
     return Math.max(...values);
   }
 
@@ -161,25 +213,42 @@
 
   // Collaborative Sync / Merge Logic
   function mergeQTables(localTable, globalTable, rate) {
-    // Deep copy the global table as our merge base
-    const blended = JSON.parse(JSON.stringify(globalTable));
+    const blended = new Map();
 
-    // Loop through local states and actions
-    for (const state in localTable) {
-      if (!blended[state]) {
-        // If state is only local, copy it directly
-        blended[state] = { ...localTable[state] };
-      } else {
-        // Blend action values
-        for (const action in localTable[state]) {
-          const localQ = localTable[state][action] || 0;
-          const globalQ = blended[state][action] || 0;
+    function importTable(table, isLocal) {
+      if (!table) return;
+      const entries = (table instanceof Map) ? table.entries() : Object.entries(table);
+      for (const [state, actionsObj] of entries) {
+        if (!isValidState(state)) continue;
+        
+        let targetMap = blended.get(state);
+        if (!targetMap) {
+          targetMap = new Map();
+          blended.set(state, targetMap);
+        }
+
+        const actionEntries = (actionsObj instanceof Map) ? actionsObj.entries() : Object.entries(actionsObj);
+        for (const [action, val] of actionEntries) {
+          if (!isValidAction(action)) continue;
           
-          // Collaborative blend formula: (1 - rate) * global + rate * local
-          blended[state][action] = globalQ * (1 - rate) + localQ * rate;
+          if (isLocal) {
+            const localQ = val || 0;
+            if (targetMap.has(action)) {
+              const globalQ = targetMap.get(action) || 0;
+              targetMap.set(action, globalQ * (1 - rate) + localQ * rate);
+            } else {
+              targetMap.set(action, localQ);
+            }
+          } else {
+            targetMap.set(action, val || 0);
+          }
         }
       }
     }
+
+    importTable(globalTable, false);
+    importTable(localTable, true);
+
     return blended;
   }
 
@@ -217,13 +286,14 @@
 
     // 3. Push Merged Model Back to Cloud
     try {
+      const mergedObj = mapToObj(mergedQTable);
       if (syncProvider === 'mock') {
-        localStorage.setItem('snakeGlobalQTableMock', JSON.stringify(mergedQTable));
+        localStorage.setItem('snakeGlobalQTableMock', JSON.stringify(mergedObj));
       } else {
         const response = await fetch(syncUrl, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(mergedQTable)
+          body: JSON.stringify(mergedObj)
         });
         if (!response.ok) {
           throw new Error(`Upload failed: HTTP ${response.status}`);
@@ -237,16 +307,18 @@
     }
 
     // 4. Overwrite Local Memory Q-Table with Merged Result
-    for (let key in qTable) delete qTable[key];
-    Object.assign(qTable, mergedQTable);
+    qTable.clear();
+    for (let [state, actionsMap] of mergedQTable.entries()) {
+      qTable.set(state, actionsMap);
+    }
 
     // Write backup to standard local storage
     try {
-      localStorage.setItem('snakeQTable', JSON.stringify(qTable));
+      localStorage.setItem('snakeQTable', JSON.stringify(mapToObj(qTable)));
     } catch (e) {}
 
     // 5. Update UI Indicators
-    const stateCount = Object.keys(qTable).length;
+    const stateCount = qTable.size;
     document.getElementById('sync-states').textContent = stateCount;
 
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -418,9 +490,9 @@
     // Check self-collision (head collides with any body part) - Optimized O(N)
     let collided = false;
     if (snake.cells.length > 1) {
-      const head = snake.cells[0];
+      const head = snake.cells.at(0);
       for (let i = 1; i < snake.cells.length; i++) {
-        if (head.x === snake.cells[i].x && head.y === snake.cells[i].y) {
+        if (head.x === snake.cells.at(i).x && head.y === snake.cells.at(i).y) {
           collided = true;
           break;
         }
@@ -440,7 +512,14 @@
       // Add run log entry
       const li = document.createElement('li');
       li.className = 'history-item';
-      li.innerHTML = `<span class="run-index">Game ${game}</span><span class="run-score">${score}</span>`;
+      const spanIndex = document.createElement('span');
+      spanIndex.className = 'run-index';
+      spanIndex.textContent = `Game ${game}`;
+      const spanScore = document.createElement('span');
+      spanScore.className = 'run-score';
+      spanScore.textContent = score.toString();
+      li.appendChild(spanIndex);
+      li.appendChild(spanScore);
       document.getElementById('history-score').prepend(li);
       
       // Add data to score chart
@@ -480,13 +559,13 @@
 
       // Visualize AI perception
       if (perception_on) {
-        const qVals = qTable[currentState];
+        const qVals = qTable.get(currentState);
         if (qVals) {
           const headCx = snake.x + grid / 2;
           const headCy = snake.y + grid / 2;
 
           actions.forEach(a => {
-            const q = qVals[a] || 0;
+            const q = qVals.get(a) || 0;
             context.beginPath();
             context.lineWidth = 2;
             if (q > 0.5) context.strokeStyle = '#00ff88'; // Neon Green (Safe/Good)
@@ -621,22 +700,38 @@
     const container = document.getElementById('q-table-container');
     if (!container) return;
 
-    const states = Object.keys(qTable).sort();
+    const states = Array.from(qTable.keys()).sort();
     
     if (states.length === 0) {
-      container.innerHTML = '<div class="qtable-empty">No states learned yet. Switch to AI Mode to train.</div>';
+      container.innerHTML = '';
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'qtable-empty';
+      emptyDiv.textContent = 'No states learned yet. Switch to AI Mode to train.';
+      container.appendChild(emptyDiv);
       return;
     }
 
-    let html = '<table class="qtable-grid">';
-    html += '<thead><tr><th>State Representation</th><th>Left</th><th>Up</th><th>Right</th><th>Down</th></tr></thead><tbody>';
-    
+    const table = document.createElement('table');
+    table.className = 'qtable-grid';
+
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    ['State Representation', 'Left', 'Up', 'Right', 'Down'].forEach(text => {
+      const th = document.createElement('th');
+      th.textContent = text;
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
     states.forEach(state => {
-      const actionsObj = qTable[state] || {};
-      const leftVal = actionsObj.left || 0;
-      const upVal = actionsObj.up || 0;
-      const rightVal = actionsObj.right || 0;
-      const downVal = actionsObj.down || 0;
+      if (!isValidState(state)) return;
+      const actionsMap = qTable.get(state);
+      const leftVal = actionsMap ? (actionsMap.get('left') || 0) : 0;
+      const upVal = actionsMap ? (actionsMap.get('up') || 0) : 0;
+      const rightVal = actionsMap ? (actionsMap.get('right') || 0) : 0;
+      const downVal = actionsMap ? (actionsMap.get('down') || 0) : 0;
 
       const vals = [leftVal, upVal, rightVal, downVal];
       const maxVal = Math.max(...vals);
@@ -647,12 +742,14 @@
         return 'q-cell';
       };
 
-      // State label formatting: "left_up_0100" -> "🍎 L/U 🚨 R"
-      const parseState = (str) => {
-        const parts = str.split('_');
-        if (parts.length < 3) return str;
+      const tr = document.createElement('tr');
+
+      const tdState = document.createElement('td');
+      tdState.className = 'q-state-cell';
+
+      const parts = state.split('_');
+      if (parts.length >= 3) {
         const [apX, apY, obs] = parts;
-        
         let foodDir = '';
         if (apX === 'same' && apY === 'same') {
           foodDir = 'On Target';
@@ -667,28 +764,44 @@
         if (obs[1] === '1') obsList.push('R');
         if (obs[2] === '1') obsList.push('U');
         if (obs[3] === '1') obsList.push('D');
-
         const obsStr = obsList.length > 0 ? `🚨 ${obsList.join(',')}` : '🟢 Clear';
-        return `<div class="state-card"><span class="state-food">🍎 ${foodDir}</span><span class="state-obs">${obsStr}</span></div>`;
-      };
-      
-      html += `<tr>
-        <td class="q-state-cell">${parseState(state)}</td>
-        <td class="${getCellClass(leftVal)}">${leftVal.toFixed(2)}</td>
-        <td class="${getCellClass(upVal)}">${upVal.toFixed(2)}</td>
-        <td class="${getCellClass(rightVal)}">${rightVal.toFixed(2)}</td>
-        <td class="${getCellClass(downVal)}">${downVal.toFixed(2)}</td>
-      </tr>`;
+
+        const card = document.createElement('div');
+        card.className = 'state-card';
+        const spanFood = document.createElement('span');
+        spanFood.className = 'state-food';
+        spanFood.textContent = `🍎 ${foodDir}`;
+        const spanObs = document.createElement('span');
+        spanObs.className = 'state-obs';
+        spanObs.textContent = obsStr;
+        card.appendChild(spanFood);
+        card.appendChild(spanObs);
+        tdState.appendChild(card);
+      } else {
+        tdState.textContent = state;
+      }
+      tr.appendChild(tdState);
+
+      [leftVal, upVal, rightVal, downVal].forEach(val => {
+        const td = document.createElement('td');
+        td.className = getCellClass(val);
+        td.textContent = val.toFixed(2);
+        tr.appendChild(td);
+      });
+
+      tbody.appendChild(tr);
     });
-    html += '</tbody></table>';
-    container.innerHTML = html;
+    table.appendChild(tbody);
+
+    container.innerHTML = '';
+    container.appendChild(table);
   }
 
   document.getElementById('refresh-qtable').addEventListener('click', renderQTable);
 
   document.getElementById('save-qtable').addEventListener('click', function () {
     try {
-      localStorage.setItem('snakeQTable', JSON.stringify(qTable));
+      localStorage.setItem('snakeQTable', JSON.stringify(mapToObj(qTable)));
       showNotification('Q-Table model saved!', 'success');
     } catch (e) {
       console.error('Local Storage Save Error:', e);
@@ -701,10 +814,13 @@
       const data = localStorage.getItem('snakeQTable');
       if (data) {
         const loaded = JSON.parse(data);
-        for (let key in qTable) delete qTable[key];
-        Object.assign(qTable, loaded);
-        showNotification('Q-Table model loaded!', 'success');
-        renderQTable();
+        if (loaded && typeof loaded === 'object') {
+          loadQTableFromObj(loaded);
+          showNotification('Q-Table model loaded!', 'success');
+          renderQTable();
+        } else {
+          showNotification('Saved Q-Table is invalid.', 'danger');
+        }
       } else {
         showNotification('No saved Q-Table found in local storage.', 'warning');
       }
@@ -728,7 +844,9 @@
     const savedData = localStorage.getItem('snakeQTable');
     if (savedData) {
       const loaded = JSON.parse(savedData);
-      Object.assign(qTable, loaded);
+      if (loaded && typeof loaded === 'object') {
+        loadQTableFromObj(loaded);
+      }
     }
   } catch (e) {
     console.error('Auto-load Error:', e);
@@ -750,7 +868,7 @@
   blendValue.textContent = Math.round(blendRate * 100);
   syncAutoToggle.checked = autoSyncEnabled;
   document.getElementById('sync-time').textContent = lastSyncTime;
-  document.getElementById('sync-states').textContent = Object.keys(qTable).length;
+  document.getElementById('sync-states').textContent = qTable.size;
 
   // Toggle visibility of Endpoint URL based on provider
   if (syncProvider === 'mock') {
