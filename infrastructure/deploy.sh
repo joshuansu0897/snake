@@ -44,14 +44,14 @@ if [[ ! "$DB_URL" =~ ^https:// ]]; then
     exit 1
 fi
 
-# 5. Apply Security Rules via REST API (Test Mode: Open Read/Write)
-echo "Configuring Security Rules to Open Test Mode..."
+# 5. Apply Security Rules via REST API (Secure Mode: Require Auth)
+echo "Configuring Security Rules to Require Authentication..."
 GCP_TOKEN=$(gcloud auth print-access-token | tr -d '\r\n')
 
 RULES_BODY='{
   "rules": {
-    ".read": "true",
-    ".write": "true"
+    ".read": "auth != null",
+    ".write": "auth != null"
   }
 }'
 

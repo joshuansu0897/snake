@@ -29,11 +29,18 @@
   let scoreChartInstance = null;
 
   // Collaborative Sync Variables
+  // Replace this with your Firebase Web API Key to enable background authentication.
+  // Note: To secure this, restrict this key in GCP console to: https://joshuansu0897.github.io/*
+  const FIREBASE_API_KEY = 'AIzaSyAagKERIjgukuEUF6Y6k3h3_Yn-9xASlt4';
   let syncProvider = localStorage.getItem('snakeSyncProvider') || 'firebase';
   let syncUrl = localStorage.getItem('snakeSyncUrl') || 'https://my-default-project-483019-default-rtdb.firebaseio.com/qtable.json';
   let blendRate = parseFloat(localStorage.getItem('snakeBlendRate') || '0.30');
   let autoSyncEnabled = localStorage.getItem('snakeAutoSync') === 'true';
   let lastSyncTime = localStorage.getItem('snakeLastSync') || 'Never';
+
+  // Token cache for background Firebase authentication
+  let cachedIdToken = null;
+  let tokenExpirationTime = 0;
 
   // Overwrite if previously empty/mock
   if (syncUrl === '' || localStorage.getItem('snakeSyncUrl') === '') {
@@ -41,6 +48,55 @@
     localStorage.setItem('snakeSyncUrl', syncUrl);
     syncProvider = 'firebase';
     localStorage.setItem('snakeSyncProvider', 'firebase');
+  }
+
+  // Retrieve or refresh Firebase Auth Token anonymously in the background
+  async function getFirebaseAuthToken() {
+    if (cachedIdToken && Date.now() < tokenExpirationTime - 300000) {
+      return cachedIdToken;
+    }
+
+    if (!FIREBASE_API_KEY) {
+      console.warn("Firebase Web API Key is not configured. Realtime Database operations may fail if auth is required.");
+      return null;
+    }
+
+    try {
+      const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FIREBASE_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ returnSecureToken: true })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      cachedIdToken = data.idToken;
+      const expiresInMs = parseInt(data.expiresIn || '3600') * 1000;
+      tokenExpirationTime = Date.now() + expiresInMs;
+      console.log("Firebase Anonymous Authentication successful.");
+      return cachedIdToken;
+    } catch (err) {
+      console.error("Firebase Auth failed:", err);
+      showNotification(`Authentication failed: ${err.message}`, 'danger');
+      throw err;
+    }
+  }
+
+  // Appends the ?auth=<token> query parameter to database requests
+  function buildAuthenticatedUrl(url, idToken) {
+    if (!idToken) return url;
+    try {
+      const parsedUrl = new URL(url);
+      parsedUrl.searchParams.set('auth', idToken);
+      return parsedUrl.toString();
+    } catch (e) {
+      const separator = url.includes('?') ? '&' : '?';
+      return `${url}${separator}auth=${encodeURIComponent(idToken)}`;
+    }
   }
 
   // Create snake
@@ -87,7 +143,7 @@
   // Q-Learning Helper Functions
   function getState() {
     const head = { x: snake.x, y: snake.y };
-    
+
     // Determine relative apple position
     const appleX = apple.x < head.x ? 'left' : (apple.x > head.x ? 'right' : 'same');
     const appleY = apple.y < head.y ? 'up' : (apple.y > head.y ? 'down' : 'same');
@@ -98,7 +154,7 @@
       else if (x >= canvas.width) x = 0;
       if (y < 0) y = canvas.height - grid;
       else if (y >= canvas.height) y = 0;
-      
+
       // Check if coordinate collides with snake body
       return snake.cells.some(cell => cell.x === x && cell.y === y);
     };
@@ -220,7 +276,7 @@
       const entries = (table instanceof Map) ? table.entries() : Object.entries(table);
       for (const [state, actionsObj] of entries) {
         if (!isValidState(state)) continue;
-        
+
         let targetMap = blended.get(state);
         if (!targetMap) {
           targetMap = new Map();
@@ -230,7 +286,7 @@
         const actionEntries = (actionsObj instanceof Map) ? actionsObj.entries() : Object.entries(actionsObj);
         for (const [action, val] of actionEntries) {
           if (!isValidAction(action)) continue;
-          
+
           if (isLocal) {
             const localQ = val || 0;
             if (targetMap.has(action)) {
@@ -257,6 +313,16 @@
     updateSyncStatusUI('Syncing...', 'syncing');
 
     let globalQTable = {};
+    let idToken = null;
+
+    if (syncProvider === 'firebase') {
+      try {
+        idToken = await getFirebaseAuthToken();
+      } catch (err) {
+        updateSyncStatusUI('Disconnected', 'disconnected');
+        return; // Error notification already shown in helper
+      }
+    }
 
     // 1. Fetch Shared Global Model
     try {
@@ -267,7 +333,8 @@
         if (!syncUrl) {
           throw new Error('Database endpoint URL is empty.');
         }
-        const response = await fetch(syncUrl);
+        const fetchUrl = (syncProvider === 'firebase') ? buildAuthenticatedUrl(syncUrl, idToken) : syncUrl;
+        const response = await fetch(fetchUrl);
         if (!response.ok) {
           throw new Error(`Fetch failed: HTTP ${response.status}`);
         }
@@ -290,7 +357,8 @@
       if (syncProvider === 'mock') {
         localStorage.setItem('snakeGlobalQTableMock', JSON.stringify(mergedObj));
       } else {
-        const response = await fetch(syncUrl, {
+        const uploadUrl = (syncProvider === 'firebase') ? buildAuthenticatedUrl(syncUrl, idToken) : syncUrl;
+        const response = await fetch(uploadUrl, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(mergedObj)
@@ -315,7 +383,7 @@
     // Write backup to standard local storage
     try {
       localStorage.setItem('snakeQTable', JSON.stringify(mapToObj(qTable)));
-    } catch (e) {}
+    } catch (e) { }
 
     // 5. Update UI Indicators
     const stateCount = qTable.size;
@@ -343,7 +411,7 @@
   function initChart() {
     const chartCtx = document.getElementById('scoreChart');
     if (!chartCtx) return;
-    
+
     scoreChartInstance = new Chart(chartCtx.getContext('2d'), {
       type: 'line',
       data: {
@@ -465,7 +533,7 @@
       } else {
         context.fillStyle = 'rgba(0, 229, 255, 0.7)'; // Translucent Neon Cyan for body
       }
-      
+
       // Draw rounded rects for snake cells for a more modern appearance
       const pad = 1;
       context.beginPath();
@@ -501,7 +569,7 @@
 
     if (collided) {
       reward = -100; // Penalty for dying
-      
+
       // Update high score
       if (score > highScore) {
         highScore = score;
@@ -521,7 +589,7 @@
       li.appendChild(spanIndex);
       li.appendChild(spanScore);
       document.getElementById('history-score').prepend(li);
-      
+
       // Add data to score chart
       updateChart(game, score);
 
@@ -701,7 +769,7 @@
     if (!container) return;
 
     const states = Array.from(qTable.keys()).sort();
-    
+
     if (states.length === 0) {
       container.innerHTML = '';
       const emptyDiv = document.createElement('div');
@@ -735,7 +803,7 @@
 
       const vals = [leftVal, upVal, rightVal, downVal];
       const maxVal = Math.max(...vals);
-      
+
       const getCellClass = (val) => {
         if (val === maxVal && val !== 0) return 'q-cell q-cell-best';
         if (val < -10) return 'q-cell q-cell-danger';

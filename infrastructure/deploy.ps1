@@ -41,14 +41,14 @@ if (-not $dbUrl -or $dbUrl -notlike "https://*") {
     Write-Error "Could not retrieve a valid Database URL from Terraform. Check for prior errors. Got: $dbUrl"
 }
 
-# 5. Apply Security Rules via REST API (Test Mode: Open Read/Write)
-Write-Host "Configuring Security Rules to Open Test Mode..." -ForegroundColor Cyan
+# 5. Apply Security Rules via REST API (Secure Mode: Require Auth)
+Write-Host "Configuring Security Rules to Require Authentication..." -ForegroundColor Cyan
 $gcpToken = (gcloud auth print-access-token).Trim()
 
 $rules = @{
     rules = @{
-        ".read"  = "true"
-        ".write" = "true"
+        ".read"  = "auth != null"
+        ".write" = "auth != null"
     }
 } | ConvertTo-Json -Depth 5
 
